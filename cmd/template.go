@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,7 +35,11 @@ var templateCmd = &cobra.Command{
 		}
 		defer r.Close()
 
-		if err := csvutil.GenerateTemplate(r, os.Stdout); err != nil {
+		var ior io.Reader = r
+		if isShiftJIS {
+			ior = csvutil.ShiftJISEncoder(r)
+		}
+		if err := csvutil.GenerateTemplate(ior, os.Stdout); err != nil {
 			log.Fatal(err)
 		}
 	},

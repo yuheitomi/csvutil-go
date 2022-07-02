@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ var convertCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer r.Close()
 
 		schema, err := csvutil.ReadSchema(r)
 
@@ -71,13 +73,18 @@ func convertCSV(csvFile string, outFile string, schema csvutil.HeaderSchema) err
 	}
 	defer r.Close()
 
+	var ior io.Reader = r
+	if isShiftJIS {
+		ior = csvutil.ShiftJISEncoder(r)
+	}
+
 	w, err := os.Create(outFile)
 	if err != nil {
 		return err
 	}
 	defer w.Close()
 
-	if err := csvutil.ConvertCSV(r, w, schema); err != nil {
+	if err := csvutil.ConvertCSV(ior, w, schema); err != nil {
 		return err
 	}
 	return nil

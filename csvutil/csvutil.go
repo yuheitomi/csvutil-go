@@ -4,6 +4,9 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 )
 
 type HeaderSchema map[string]string
@@ -92,4 +95,8 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 		}
 	}
 	return nil
+}
+
+func ShiftJISEncoder(r io.Reader) *transform.Reader {
+	return transform.NewReader(r, japanese.ShiftJIS.NewDecoder())
 }

@@ -12,9 +12,15 @@ var rootCmd = &cobra.Command{
 	Short: "CSV file utility commands",
 }
 
+var isShiftJIS = false
+
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&isShiftJIS, "shiftjis", false, "Read as Shift-JIS file")
 }
