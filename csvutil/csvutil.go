@@ -4,12 +4,18 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strings"
 
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
 )
 
-type HeaderSchema map[string]string
+type HeaderSchema map[string]Schema
+
+type Schema struct {
+	Name string
+	Type string
+}
 
 func GenerateTemplate(r io.Reader, w io.Writer) error {
 	cr := csv.NewReader(r)
@@ -33,6 +39,7 @@ func GenerateTemplate(r io.Reader, w io.Writer) error {
 
 func ReadSchema(r io.Reader) (HeaderSchema, error) {
 	cr := csv.NewReader(r)
+	cr.FieldsPerRecord = -1 // no check to capture optional third column
 	result := make(HeaderSchema)
 
 	for {
@@ -46,7 +53,15 @@ func ReadSchema(r io.Reader) (HeaderSchema, error) {
 
 		if len(rec) >= 2 {
 			if rec[1] != "" {
-				result[rec[0]] = rec[1]
+				f1 := rec[1]
+				f2 := ""
+				if len(rec) >= 3 {
+					f2 = rec[2]
+				}
+				result[rec[0]] = Schema{
+					Name: f1,
+					Type: f2,
+				}
 			}
 		}
 	}
@@ -69,12 +84,14 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema, skipEmpty bool) e
 	}
 
 	newHeader := make([]string, 0)
+	headerTypes := make([]string, len(header))
 	skipColumns := make([]bool, len(header))
 
 	for i, col := range header {
 		newCol, ok := schema[col]
 		if ok {
-			newHeader = append(newHeader, newCol)
+			newHeader = append(newHeader, newCol.Name)
+			headerTypes[i] = newCol.Type
 		} else {
 			if skipEmpty {
 				skipColumns[i] = true
@@ -97,23 +114,24 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema, skipEmpty bool) e
 			return err
 		}
 
-		if skipEmpty {
-			for i, col := range row {
-				if !skipColumns[i] {
-					newRow = append(newRow, col)
+		for i, col := range row {
+			if !skipColumns[i] {
+				if headerTypes[i] == "DATE" {
+					col = convertDate(col)
 				}
-			}
-			if err := cw.Write(newRow); err != nil {
-				return err
-			}
-			newRow = newRow[:0]
-		} else {
-			if err := cw.Write(row); err != nil {
-				return err
+				newRow = append(newRow, col)
 			}
 		}
+		if err := cw.Write(newRow); err != nil {
+			return err
+		}
+		newRow = newRow[:0]
 	}
 	return nil
+}
+
+func convertDate(field string) string {
+	return strings.ReplaceAll(field, "/", "-")
 }
 
 func ShiftJISEncoder(r io.Reader) *transform.Reader {

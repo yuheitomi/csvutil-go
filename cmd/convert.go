@@ -33,6 +33,9 @@ var convertCmd = &cobra.Command{
 		defer r.Close()
 
 		schema, err := csvutil.ReadSchema(r)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		if err := convertFiles(csvFiles, schema, outputDirectory); err != nil {
 			log.Fatal(err)
