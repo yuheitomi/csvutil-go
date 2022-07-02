@@ -72,7 +72,6 @@ func convertCSVHeaderWithFiles(csvFiles []string, schema map[string]string, outD
 			return err
 		}
 
-		// TODO: use proper output file
 		newFile := outputFilePath(csvFile, outDir)
 		w, err := os.Create(newFile)
 		if err != nil {
@@ -102,7 +101,10 @@ func outputFilePath(origFile string, outDir string) string {
 
 func convertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 	cr := csv.NewReader(r)
+	cr.ReuseRecord = true
+
 	cw := csv.NewWriter(w)
+	defer cw.Flush()
 
 	header, err := cr.Read()
 	if err != nil {
@@ -118,10 +120,10 @@ func convertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 			newHeader[i] = col
 		}
 	}
-	cw.Write(newHeader)
-	defer cw.Flush()
+	if err := cw.Write(newHeader); err != nil {
+		return err
+	}
 
-	// TODO: Reuse CSV buffer
 	for {
 		rows, err := cr.Read()
 		if err == io.EOF {
@@ -130,7 +132,9 @@ func convertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 			return err
 		}
 
-		cw.Write(rows)
+		if err := cw.Write(rows); err != nil {
+			return err
+		}
 	}
 
 	return nil
