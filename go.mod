@@ -1,4 +1,4 @@
-module yuheitomi/csvutil
+module github.com/yuheitomi/csvutil
 
 go 1.18
 

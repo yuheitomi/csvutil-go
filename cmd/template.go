@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"yuheitomi/csvutil/csvutil"
+	"github.com/yuheitomi/csvutil/csvutil"
 )
 
 // templateCmd represents the template command
