@@ -41,10 +41,12 @@ var convertCmd = &cobra.Command{
 }
 
 var outputDirectory = ""
+var skipEmptyColumns = false
 
 func init() {
 	rootCmd.AddCommand(convertCmd)
 	convertCmd.Flags().StringVarP(&outputDirectory, "output", "o", "", "output directory")
+	convertCmd.Flags().BoolVar(&skipEmptyColumns, "skip-empty", false, "Skip columns not renamed in schema")
 }
 
 func convertFiles(csvFiles []string, schema csvutil.HeaderSchema, outDir string) error {
@@ -84,7 +86,7 @@ func convertCSV(csvFile string, outFile string, schema csvutil.HeaderSchema) err
 	}
 	defer w.Close()
 
-	if err := csvutil.ConvertCSV(ior, w, schema); err != nil {
+	if err := csvutil.ConvertCSV(ior, w, schema, skipEmptyColumns); err != nil {
 		return err
 	}
 	return nil

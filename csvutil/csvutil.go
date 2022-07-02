@@ -54,7 +54,7 @@ func ReadSchema(r io.Reader) (HeaderSchema, error) {
 	return result, nil
 }
 
-func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
+func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema, skipEmpty bool) error {
 	cr := csv.NewReader(r)
 	cr.ReuseRecord = true
 
@@ -68,13 +68,19 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 		return err
 	}
 
-	newHeader := make([]string, len(header))
+	newHeader := make([]string, 0)
+	skipColumns := make([]bool, len(header))
+
 	for i, col := range header {
 		newCol, ok := schema[col]
 		if ok {
-			newHeader[i] = newCol
+			newHeader = append(newHeader, newCol)
 		} else {
-			newHeader[i] = col
+			if skipEmpty {
+				skipColumns[i] = true
+			} else {
+				newHeader = append(newHeader, col)
+			}
 		}
 	}
 	if err := cw.Write(newHeader); err != nil {
@@ -82,16 +88,29 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema) error {
 	}
 
 	// Just copy the following rows without changes.
+	newRow := make([]string, 0, len(newHeader))
 	for {
-		rows, err := cr.Read()
+		row, err := cr.Read()
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return err
 		}
 
-		if err := cw.Write(rows); err != nil {
-			return err
+		if skipEmpty {
+			for i, col := range row {
+				if !skipColumns[i] {
+					newRow = append(newRow, col)
+				}
+			}
+			if err := cw.Write(newRow); err != nil {
+				return err
+			}
+			newRow = newRow[:0]
+		} else {
+			if err := cw.Write(row); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
