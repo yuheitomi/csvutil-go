@@ -1,7 +1,4 @@
-/*
-Copyright © 2022 Yuhei Kuratomi
-
-*/
+// Package cmd /*
 package cmd
 
 import (
@@ -11,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"yuheitomi/csvutil/csvutil"
 )
 
 // templateCmd represents the template command
@@ -36,7 +34,9 @@ var templateCmd = &cobra.Command{
 		}
 		defer r.Close()
 
-		generateTemplate(r, os.Stdout)
+		if err := csvutil.GenerateTemplate(r, os.Stdout); err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
