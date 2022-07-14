@@ -4,7 +4,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
+	"regexp"
 	"strings"
+	"time"
 
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
@@ -16,6 +19,8 @@ type Schema struct {
 	Name string
 	Type string
 }
+
+var dateFormatRegexP *regexp.Regexp = regexp.MustCompile("DATE\\(([A-z-/:]+)\\)")
 
 func GenerateTemplate(r io.Reader, w io.Writer) error {
 	cr := csv.NewReader(r)
@@ -116,8 +121,9 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema, skipEmpty bool) e
 
 		for i, col := range row {
 			if !skipColumns[i] {
-				if headerTypes[i] == "DATE" {
-					col = convertDate(col)
+				if strings.Contains(headerTypes[i], "DATE") {
+					format := getDateFormat(headerTypes[i])
+					col = convertDate(col, format)
 				}
 				newRow = append(newRow, col)
 			}
@@ -130,8 +136,26 @@ func ConvertCSV(r io.Reader, w io.Writer, schema HeaderSchema, skipEmpty bool) e
 	return nil
 }
 
-func convertDate(field string) string {
-	return strings.ReplaceAll(field, "/", "-")
+func getDateFormat(fmtString string) string {
+	subMatches := dateFormatRegexP.FindSubmatch([]byte(fmtString))
+	if len(subMatches) < 1 {
+		return "2006-01-02"
+	}
+
+	format := string(subMatches[1])
+	format = strings.Replace(format, "YYYY", "2006", 1)
+	format = strings.Replace(format, "MM", "01", 1)
+	format = strings.Replace(format, "DD", "02", 1)
+	return string(format)
+}
+
+func convertDate(field string, dateFmt string) string {
+	date, err := time.ParseInLocation(dateFmt, field, time.Local)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	return date.String()
 }
 
 func ShiftJISEncoder(r io.Reader) *transform.Reader {
