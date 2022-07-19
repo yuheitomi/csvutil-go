@@ -155,7 +155,7 @@ func convertDate(field string, dateFmt string) string {
 		log.Println(err)
 		return ""
 	}
-	return date.String()
+	return date.Format("2006-01-02")
 }
 
 func ShiftJISEncoder(r io.Reader) *transform.Reader {
